@@ -118,11 +118,11 @@ details ol{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--sub);disp
     <div class="side">
       <section class="panel">
         <div class="step"><b>1</b><h2>공급자 (우리 회사)</h2><span id="supState"></span></div>
+        <label class="f" for="supSel">어느 사업자로 발행하나요?<select id="supSel"></select></label>
+        <p class="hint">처음 쓰는 PC라면, 전에 홈택스에 올렸던 일괄발급 엑셀(개인·법인 각각)을 아래 2번에 한 번만 올려 주세요. 공급자 정보가 이 PC에 저장되고, 다음부터는 여기서 고르기만 하면 돼요.</p>
         <details id="supBox">
-          <summary>공급자 정보 적기 · 고치기</summary>
+          <summary>공급자 정보 보기 · 직접 고치기</summary>
           <div class="inner">
-            <p class="hint">세금계산서의 공급자 칸에 들어가요. 한 번 저장하면 다음부터는 안 적어도 돼요. 전에 홈택스에 올렸던 엑셀을 아래 2번에 올리면 그 파일에서 불러옵니다.</p>
-            <label class="f" for="supSel">저장해 둔 공급자<select id="supSel"></select></label>
             <div class="row">
               <label class="f" for="s_no">사업자등록번호<input id="s_no" type="text" inputmode="numeric" autocomplete="off"></label>
               <label class="f" for="s_sub">종사업장번호 <span class="hint">(없으면 비움)</span><input id="s_sub" type="text" autocomplete="off"></label>
@@ -137,7 +137,7 @@ details ol{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--sub);disp
               <label class="f" for="s_item">종목<input id="s_item" type="text" autocomplete="off"></label>
             </div>
             <label class="f" for="s_email">이메일<input id="s_email" type="text" autocomplete="off"></label>
-            <label class="f" for="s_label">파일 이름표 <span class="hint">(받는 파일 이름에 들어가요. 예: 법인_홍길동)</span><input id="s_label" type="text" autocomplete="off"></label>
+            <label class="f" for="s_label">이름표 <span class="hint">(고를 때 보이고, 받는 파일 이름에 들어가요. 예: 법인LMS_홍길동)</span><input id="s_label" type="text" autocomplete="off"></label>
             <div class="acts"><button id="supSave" class="pri" type="button">이 PC에 저장</button><button id="supDel" type="button">지우기</button><span id="supMsg" class="toast"></span></div>
           </div>
         </details>
@@ -156,7 +156,7 @@ details ol{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--sub);disp
           <ol>
             <li><b>세금계산서 발행세대 목록</b> 엑셀 1개. 첫 줄에 건물명·동·호수·상호·사업자등록번호·대표자·주소·업태·종목·이메일1·이메일2·영수청구·발행시작월·발행종료월·발행여부가 있어야 해요. 구글 시트라면 아래 "붙여 넣기"가 더 빨라요.</li>
             <li><b>조정대장 PDF</b>. XpERP 조정대장에서 <b>총부과</b>로 조회해 PDF로 저장한 파일. 이번에 발행할 건물마다 1개씩.</li>
-            <li>(처음 한 번) 전에 홈택스에 올렸던 <b>일괄발급 엑셀</b>. 공급자 정보를 불러옵니다.</li>
+            <li>(처음 한 번) 전에 홈택스에 올렸던 <b>일괄발급 엑셀</b>(.xls, .xlsx). 7행의 공급자 정보만 읽어 이 PC에 저장합니다. 개인·법인 두 개를 같이 올려도 돼요.</li>
           </ol>
         </details>
         <details id="pasteBox">
@@ -550,9 +550,67 @@ var Core = (function(){
   }
   function isHometaxForm(aoa){ return /엑셀\s*업로드\s*양식/.test(s((aoa[0]||[])[0])); }
 
+
+  /* ---------- 보호된 .xls 열기 ----------
+     홈택스에서 받은 양식(.xls)은 엑셀 기본 보호(암호 없이 열리는 통합문서 보호)가 걸려 있어 그대로는 읽지 못한다.
+     엑셀이 자동으로 쓰는 기본 암호로 풀어 Workbook 스트림만 돌려준다. (BIFF8 RC4) */
+  function md5(bytes){
+    function add(a,b){ return (a+b)|0; } function rol(x,c){ return (x<<c)|(x>>>(32-c)); }
+    var K=[],S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21],i;
+    for(i=0;i<64;i++) K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296)|0;
+    var n=bytes.length, len=((n+8)>>>6<<6)+64, m=new Uint8Array(len); m.set(bytes); m[n]=0x80;
+    var bits=n*8; m[len-8]=bits&255; m[len-7]=(bits>>>8)&255; m[len-6]=(bits>>>16)&255; m[len-5]=(bits>>>24)&255;
+    var a0=0x67452301,b0=0xefcdab89|0,c0=0x98badcfe|0,d0=0x10325476;
+    for(var o=0;o<len;o+=64){
+      var M=[]; for(i=0;i<16;i++) M[i]=m[o+i*4]|(m[o+i*4+1]<<8)|(m[o+i*4+2]<<16)|(m[o+i*4+3]<<24);
+      var A=a0,B=b0,C=c0,D=d0;
+      for(i=0;i<64;i++){
+        var F,g;
+        if(i<16){ F=(B&C)|(~B&D); g=i; } else if(i<32){ F=(D&B)|(~D&C); g=(5*i+1)%16; } else if(i<48){ F=B^C^D; g=(3*i+5)%16; } else { F=C^(B|~D); g=(7*i)%16; }
+        F=add(add(add(F,A),K[i]),M[g]); A=D; D=C; C=B; B=add(B,rol(F,S[i]));
+      }
+      a0=add(a0,A); b0=add(b0,B); c0=add(c0,C); d0=add(d0,D);
+    }
+    var out=new Uint8Array(16); [a0,b0,c0,d0].forEach(function(v,j){ out[j*4]=v&255; out[j*4+1]=(v>>>8)&255; out[j*4+2]=(v>>>16)&255; out[j*4+3]=(v>>>24)&255; });
+    return out;
+  }
+  function rc4stream(key,n){
+    var S=new Uint8Array(256),i,j=0,t; for(i=0;i<256;i++) S[i]=i;
+    for(i=0;i<256;i++){ j=(j+S[i]+key[i%key.length])&255; t=S[i];S[i]=S[j];S[j]=t; }
+    var out=new Uint8Array(n); i=0; j=0;
+    for(var k=0;k<n;k++){ i=(i+1)&255; j=(j+S[i])&255; t=S[i];S[i]=S[j];S[j]=t; out[k]=S[(S[i]+S[j])&255]; }
+    return out;
+  }
+  function cat(a,b){ var o=new Uint8Array(a.length+b.length); o.set(a); o.set(b,a.length); return o; }
+  function xlsUnlock(wbStream){ // Workbook 스트림(Uint8Array) → 풀린 스트림. 보호가 없거나 못 풀면 null
+    var d=new Uint8Array(wbStream), p=0, fp=-1;
+    function u16(o){ return d[o]|(d[o+1]<<8); }
+    while(p+4<=d.length){ var t=u16(p), l=u16(p+2); if(t===0x2F){ fp=p; break; } if(t===0x0A && p>0) break; p+=4+l; }
+    if(fp<0) return null;
+    if(u16(fp+4)!==1 || u16(fp+6)!==1 || u16(fp+8)!==1) return null; // RC4(기본형)만
+    var salt=d.subarray(fp+10,fp+26), ver=d.subarray(fp+26,fp+42), verHash=d.subarray(fp+42,fp+58);
+    var pw='VelvetSweatshop', pb=new Uint8Array(pw.length*2); for(var i=0;i<pw.length;i++) pb[i*2]=pw.charCodeAt(i);
+    var h0=md5(pb).subarray(0,5), unit=cat(h0,salt), buf=new Uint8Array(unit.length*16); for(i=0;i<16;i++) buf.set(unit,i*unit.length);
+    var h1=md5(buf).subarray(0,5);
+    function key(block){ return md5(cat(h1,new Uint8Array([block&255,(block>>>8)&255,(block>>>16)&255,(block>>>24)&255]))); }
+    var ks0=rc4stream(key(0),32), v=new Uint8Array(16), vh=new Uint8Array(16);
+    for(i=0;i<16;i++){ v[i]=ver[i]^ks0[i]; vh[i]=verHash[i]^ks0[16+i]; }
+    var chk=md5(v); for(i=0;i<16;i++) if(chk[i]!==vh[i]) return null; // 따로 암호를 건 파일
+    var out=new Uint8Array(d), blocks={}, PLAIN={0x809:1,0x2F:1,0x194:1,0x195:1,0xE1:1,0x196:1,0x138:1};
+    function ksAt(o){ var b=Math.floor(o/1024); if(!blocks[b]) blocks[b]=rc4stream(key(b),1024); return blocks[b][o%1024]; }
+    p=0;
+    while(p+4<=d.length){
+      var rt=u16(p), rl=u16(p+2), s0=p+4, e0=Math.min(s0+rl,d.length);
+      if(!PLAIN[rt]){ for(var o=(rt===0x85?s0+4:s0);o<e0;o++) out[o]=d[o]^ksAt(o); }
+      p=e0;
+    }
+    out[fp]=0xFE; out[fp+1]=0x0F; // 보호 표시 줄은 읽는 쪽이 건너뛰게 바꿔 둔다 (길이는 그대로)
+    return out;
+  }
+
   return {s:s,fmt:fmt,ymNorm:ymNorm,writeDate:writeDate,digits:digits,parseList:parseList,buildings:buildings,guessBuilding:guessBuilding,
     parsePage:parsePage,parseJojeong:parseJojeong,select:select,rowsFor:rowsFor,buildXlsx:buildXlsx,supplierFrom:supplierFrom,isHometaxForm:isHometaxForm,
-    tokens:tokens,linesOf:linesOf};
+    tokens:tokens,linesOf:linesOf,xlsUnlock:xlsUnlock,md5:md5};
 })();
 if(typeof module!=='undefined') module.exports=Core;
 </script>
@@ -587,6 +645,23 @@ if(typeof module!=='undefined') module.exports=Core;
       return chain.then(function(){ return Core.parseJojeong(pages); });
     });
   }
+  // 홈택스에서 받은 양식(.xls)은 엑셀 기본 보호가 걸려 있어 한 번 풀어서 읽는다
+  function readBook(buf){
+    try{ return XLSX.read(buf,{type:'array',cellDates:true}); }
+    catch(e){
+      if(!/password|encrypt/i.test(String(e&&e.message))) throw e;
+      var cfb=XLSX.CFB.read(new Uint8Array(buf),{type:'array'}), ent=XLSX.CFB.find(cfb,'/Workbook')||XLSX.CFB.find(cfb,'/Book');
+      var raw=ent && Core.xlsUnlock(ent.content);
+      if(!raw){ var err=new Error('locked'); err.locked=true; throw err; }
+      return XLSX.read(raw,{type:'array',cellDates:true});
+    }
+  }
+  function addSupplier(sp,fileName){
+    var m=String(fileName).normalize('NFC').match(/(개인|법인)\s*[A-Za-z가-힣]*/), i=state.sups.findIndex(function(p){return Core.digits(p.no)===sp.no && s(p.sub)===sp.sub;});
+    sp.label = i>=0 ? (state.sups[i].label||'') : (m ? m[0].replace(/\s+/g,'') : '');
+    if(i>=0) state.sups[i]=sp; else { state.sups.push(sp); i=state.sups.length-1; }
+    state.cur=i; supFill(sp); return saveSups();
+  }
   function names(){ return state.list ? Core.buildings(state.list.recs) : []; }
   function guessAll(){ var n=names(); state.ledgers.forEach(function(L){ if(!L.picked){ L.building=Core.guessBuilding(n,L.J.complex,L.name); } else if(n.indexOf(L.building)<0) { L.building=''; L.picked=false; } }); }
   function setList(aoa,name){
@@ -613,19 +688,19 @@ if(typeof module!=='undefined') module.exports=Core;
           });
         }
         if(/\.(xlsx|xls|csv)$/i.test(f.name)){
-          var wb=XLSX.read(buf,{type:'array',cellDates:true});
+          var wb=readBook(buf);
           var sn=wb.SheetNames.filter(function(n){return /발행세대/.test(n);})[0] || wb.SheetNames.filter(function(n){return /엑셀업로드양식/.test(n);})[0] || wb.SheetNames[0];
           var aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
           if(Core.isHometaxForm(aoa)){
             var sp=Core.supplierFrom(aoa);
             if(!sp){ state.msgs.push({cls:'p-warn',t:f.name+': 홈택스 양식인데 7행에 공급자 정보가 없어요.'}); return; }
-            sp.label=s($('s_label').value); supFill(sp);
-            state.msgs.push({cls:'p-ok',t:f.name+': 공급자 정보를 불러왔어요. 맞는지 보고 "이 PC에 저장"을 눌러 주세요.'}); $('supBox').open=true; return;
+            var kept=addSupplier(sp,f.name);
+            state.msgs.push({cls:'p-ok',t:f.name+': 공급자 "'+(sp.label||sp.name)+'"'+(kept?'을(를) 이 PC에 저장했어요. 다음부터는 1번에서 고르기만 하면 돼요.':'을(를) 불러왔어요.')}); return;
           }
           setList(aoa,f.name); return;
         }
         state.msgs.push({cls:'p-bad',t:f.name+': PDF나 엑셀 파일만 올릴 수 있어요.'});
-      }).catch(function(e){ state.msgs.push({cls:'p-bad',t:f.name+': 파일을 열지 못했어요.'}); });
+      }).catch(function(e){ state.msgs.push({cls:'p-bad',t:f.name+(e&&e.locked?': 암호가 걸린 파일이라 열지 못했어요. 엑셀에서 암호를 풀고 다시 저장해 주세요.':': 파일을 열지 못했어요.')}); });
     });
     Promise.all(jobs).then(function(){ state.busy--; guessAll(); syncYm(); syncInputs(); render(); });
   }
@@ -666,10 +741,10 @@ if(typeof module!=='undefined') module.exports=Core;
     state.ledgers.forEach(function(L,i){ fl+='<li><span class="pill p-acc">조정대장</span><span>'+esc(L.J.complex||L.name)+' '+esc(ymText(L.J.ym))+' · '+L.J.list.length+'세대</span><button class="x" data-delled="'+i+'" aria-label="조정대장 지우기">×</button></li>'; });
     $('fileList').innerHTML=fl || '<li class="hint">아직 올린 자료가 없어요.</li>';
     // 공급자 저장 목록
-    var so='<option value="-1">새로 적기</option>'+state.sups.map(function(p,i){return '<option value="'+i+'"'+(i===state.cur?' selected':'')+'>'+esc(p.name||'이름 없음')+(p.label?' ('+esc(p.label)+')':'')+'</option>';}).join('');
+    var so='<option value="-1">'+(state.sups.length?'새로 적기':'저장된 공급자가 없어요')+'</option>'+state.sups.map(function(p,i){return '<option value="'+i+'"'+(i===state.cur?' selected':'')+'>'+(p.label?esc(p.label)+' · ':'')+esc(p.name||'이름 없음')+'</option>';}).join('');
     $('supSel').innerHTML=so; $('supDel').disabled=state.cur<0;
     var sup=supNow();
-    $('supState').innerHTML = supOk(sup) ? '<span class="pill p-ok">'+esc(sup.name)+'</span>' : '<span class="pill p-warn">공급자 정보를 적어 주세요</span>';
+    $('supState').innerHTML = supOk(sup) ? '<span class="pill p-ok">'+esc(sup.label||sup.name)+'</span>' : '<span class="pill p-warn">공급자 정보를 적어 주세요</span>';
 
     var box=$('result'), h='<div class="step"><b>4</b><h2>결과</h2></div>';
     // 조정대장별 건물 고르기 + 검산
@@ -761,7 +836,7 @@ if(typeof module!=='undefined') module.exports=Core;
   $('ym').addEventListener('change',function(){ state.ym=$('ym').value; state.ymTouched=true; state.wdTouched=false; state.force=false; syncYm(); syncInputs(); render(); });
   $('wdate').addEventListener('change',function(){ state.wdate=$('wdate').value; state.wdTouched=true; render(); });
   SUPF.forEach(function(f){ $('s_'+f[0]).addEventListener('input',function(){ render(); }); });
-  $('supSel').addEventListener('change',function(){ state.cur=+$('supSel').value; supFill(state.cur>=0?state.sups[state.cur]:null); saveSups(); render(); });
+  $('supSel').addEventListener('change',function(){ state.cur=+$('supSel').value; supFill(state.cur>=0?state.sups[state.cur]:null); saveSups(); if(state.cur<0) $('supBox').open=true; render(); });
   $('supSave').addEventListener('click',function(){
     var o=supNow();
     if(!supOk(o)){ $('supMsg').textContent='사업자등록번호 10자리, 상호, 대표자 성명을 적어 주세요.'; return; }
@@ -790,7 +865,7 @@ if(typeof module!=='undefined') module.exports=Core;
     else if(t.id==='force'){ state.force=t.checked; render(); }
   });
 
-  loadSups(); if(state.cur>=0) supFill(state.sups[state.cur]); else $('supBox').open=true;
+  loadSups(); if(state.cur>=0) supFill(state.sups[state.cur]);
   syncInputs(); render();
 })();
 </script>
