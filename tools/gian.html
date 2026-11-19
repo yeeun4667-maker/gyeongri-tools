@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>하이웍스 기안 만들기 (품의서·지출결의서)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff8ef;--paper:#fff;--ink:#4a3a2e;--sub:#8a7666;--line:#f0dcc6;--peach:#ffd8bf;--peach-d:#f2b48c;--mint:#cdeedd;--mint-d:#8fcfae;--sky:#d4e8ff;--sky-d:#9cc4ef;--lemon:#fff1b8}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);background-image:radial-gradient(#f4e2cd 1.2px,transparent 1.2px);background-size:22px 22px;color:var(--ink);font-family:"Gowun Dodum","Malgun Gothic",sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sign{background:var(--paper);border:3px solid var(--peach-d);border-radius:20px;padding:12px 20px 10px;box-shadow:0 5px 0 var(--peach-d)}
+.sign h1{margin:0;font-family:"Jua",sans-serif;font-weight:400;font-size:26px;color:#6b4226}
+.sign h1 span{color:#e58a5a}
+.sign p{margin:2px 0 0;color:var(--sub);font-size:13.5px}
+.badge{display:inline-block;border-radius:999px;padding:2px 12px;font-size:13px;margin-top:6px}
+.badge.pilot{background:var(--lemon);color:#6b5210}
+.badge.formal{background:var(--mint);color:#245c43}
+.home{text-decoration:none;color:#6b4226;background:var(--paper);border:2px solid var(--peach-d);border-radius:999px;padding:6px 14px;font-family:"Jua",sans-serif;font-size:15px}
+.panel{background:var(--paper);border:2.5px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:14px}
+.panel h2{margin:0 0 8px;font-family:"Jua",sans-serif;font-weight:400;font-size:18px;color:#7a4b2a}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--sub)}
+input[type=text],input[type=date],select,textarea{font:inherit;font-size:15px;color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:7px 10px;background:#fffdf9;width:100%}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus,#editor:focus{outline:3px solid var(--sky-d);outline-offset:1px}
+.hint{font-size:12.5px;color:var(--sub);margin-top:4px}
+.choice{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0}
+.choice label{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;background:#fffdf9;font-size:14px}
+.choice label:has(input:checked){background:var(--mint);border-color:var(--mint-d)}
+.choice label:has(input:disabled){opacity:.4}
+.choice input{margin:0}
+.kind label:has(input:checked){background:var(--peach);border-color:var(--peach-d)}
+.only-exp,.only-pum{display:none}
+body.exp .only-exp{display:block}
+body.pum .only-pum{display:block}
+body.pum .ev{display:none}
+.title-box{font-size:17px;background:#fffdf9;border:2px solid var(--mint-d);border-radius:14px;padding:10px 12px;min-height:50px;word-break:keep-all}
+.title-box.empty{color:var(--sub);border-color:var(--line);font-size:15px}
+table.items{width:100%;border-collapse:collapse;margin-top:6px}
+table.items th{font-weight:normal;color:var(--sub);font-size:13px;text-align:left;padding:2px 3px}
+table.items td{padding:3px 2px}
+table.items input{padding:6px 8px}
+.del{border:none;background:none;color:#b0655a;font-size:18px;cursor:pointer}
+.total{text-align:right;margin-top:4px}
+.total b{font-family:"Jua",sans-serif;font-weight:400;font-size:18px;color:#6b4226}
+button{font:inherit;font-size:14px;border:2px solid var(--peach-d);background:var(--paper);color:#6b4226;border-radius:12px;padding:6px 12px;cursor:pointer;box-shadow:0 3px 0 var(--peach-d)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--peach-d)}
+button.primary{background:var(--peach);font-family:"Jua",sans-serif;font-size:16px;padding:8px 16px}
+button.ghost{box-shadow:none;border-color:var(--line);color:var(--sub)}
+button.fix{font-size:12.5px;padding:3px 9px;box-shadow:none;background:var(--mint);border-color:var(--mint-d)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.issues{border-radius:14px;padding:8px 12px;font-size:14px}
+.issues.bad{background:#fff3ec;border:2px dashed #e9a07a}
+.issues.good{background:#effaf4;border:2px dashed var(--mint-d);color:#245c43}
+.issues .it{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:3px 0;flex-wrap:wrap}
+#editor{min-height:300px;background:#fff;border:2px solid var(--sky-d);border-radius:14px;padding:14px 16px;font-family:"맑은 고딕","Malgun Gothic",sans-serif;font-size:16px;line-height:1.8;overflow:auto;color:#000}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:999px;font-size:14px;transition:transform .25s ease;pointer-events:none}
+#toast.on{transform:translateX(-50%) translateY(0)}
+footer{margin-top:16px;text-align:center;color:#b39a85;font-size:12.5px}
+</style>
+</head>
+<body class="pum">
+<div class="wrap">
+  <div class="top">
+    <div class="sign">
+      <h1>하이웍스 기안 <span>만들기</span></h1>
+      <p>회사 기준대로 제목을 만들고, 하이웍스 양식 그대로 본문을 채워요.</p>
+      <span id="phase" class="badge"></span>
+    </div>
+    <a class="home" href="https://claude.ai/artifact/Cvd8gw6ouGm5fJs9a3EpmL">🏠 도구모음으로</a>
+  </div>
+
+  <section class="panel" id="ocrPanel" style="display:none">
+    <h2>📷 영수증으로 자동 채우기</h2>
+    <div id="ocrLink" style="display:none">
+      <p style="margin:0 0 8px">영수증 사진·PDF를 읽어 자동으로 채우는 기능은 <b>Claude 화면</b>에서 열어야 쓸 수 있어요.</p>
+      <a class="home" href="https://claude.ai/artifact/3XWSEMBDTN2w4An5VhLLUm" target="_blank" rel="noopener" style="display:inline-block;background:var(--peach)">📷 자동 채우기 화면으로 열기 →</a>
+      <div class="hint">Claude 계정으로 로그인해야 열려요. 열리지 않으면 이 도구를 만든 담당자에게 공유를 요청하세요.</div>
+    </div>
+    <div id="ocrMain">
+    <div id="drop" style="border:2.5px dashed var(--sky-d);border-radius:14px;padding:14px;text-align:center;background:#f7fbff;cursor:pointer">
+      영수증·세금계산서·카드전표 <b>사진이나 PDF</b>를 끌어놓거나 눌러서 고르세요 (여러 장 가능)
+      <input type="file" id="ocrFile" accept="image/*,application/pdf" multiple style="display:none">
+    </div>
+    <div id="ocrList" class="hint"></div>
+    <div class="btns">
+      <button id="ocrRun" class="primary" disabled>읽어서 채우기</button>
+      <span id="ocrMsg" class="hint"></span>
+    </div>
+    <div class="hint">날짜·거래처·품목·금액·증빙 종류를 읽어 아래 칸을 채워요. 건물명과 내용은 확인 후 직접 고치세요. <b>금액은 꼭 원본과 대조하세요.</b></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>1. 기안 종류 · 제목 정보</h2>
+    <div class="choice kind">
+      <label><input type="radio" name="kind" value="pum" checked> 품의서</label>
+      <label><input type="radio" name="kind" value="exp"> 지출결의서</label>
+    </div>
+    <div class="hint only-exp">품의서가 있는 건은 하이웍스에서 품의서를 열고 <b>후속기안</b> → 문서종류 지출결의서 · 본문 포함 안함 · 별첨 포함 · 원본문서 링크 포함 → 확인 후, 여기서 만든 제목·본문을 붙여넣으세요.</div>
+
+    <div class="row" style="margin-top:10px">
+      <label class="f">기안 주체
+        <select id="who">
+          <option value="개인LMS">개인LMS</option>
+          <option value="법인LMS" selected>법인LMS</option>
+          <option value="LMS관리팀">LMS관리팀</option>
+            <option value="LMS경리팀">LMS경리팀</option>
+          <option value="__custom">직접 입력</option>
+        </select>
+      </label>
+      <label class="f" id="whoCustomWrap" style="display:none">직접 입력한 주체
+        <input type="text" id="whoCustom">
+      </label>
+      <label class="f">날짜 표기
+        <select id="dUnit">
+          <option value="ym" selected>연월 (26년 11월)</option>
+          <option value="ymd">연월일 (26년 11월 17일)</option>
+          <option value="y">연도 (26년도)</option>
+          <option value="none">표기 안 함</option>
+        </select>
+      </label>
+      <label class="f">날짜
+        <input type="date" id="tDate">
+      </label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="f">대상 건물
+        <input type="text" id="bld" list="bldList" placeholder="예: 라제스티">
+        <datalist id="bldList">
+          <option value="심곡로얄"><option value="이클래스"><option value="심곡이온"><option value="원미이온">
+          <option value="심곡비반트"><option value="라제스티"><option value="창익골든뷰"><option value="고웰스테이"><option value="해냄스토리">
+        </datalist>
+      </label>
+      <label class="f" style="grid-column:span 2">지출 목적·내용
+        <input type="text" id="what" placeholder="예: 관리물품 구매">
+      </label>
+    </div>
+    <div class="hint">제목 순서: [기안 주체] <b>연월 → 건물명 → 내용</b>의 건. “의 건”, “품의서”, 증빙 괄호는 자동으로 붙어요.</div>
+
+    <div class="ev choice" style="margin-top:8px">
+      <span class="hint" style="margin-right:4px">증빙·비용 구분:</span>
+      <label><input type="checkbox" id="tax"> 세금계산서(세계)</label>
+      <label><input type="checkbox" id="cash"> 현금영수증(현영)</label>
+      <label><input type="checkbox" id="fac"> 시설관리비(시설)</label>
+      <label><input type="checkbox" id="card"> 법인카드(카드)</label>
+      <label><input type="checkbox" id="auto"> 자동이체(자동이체)</label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>2. 제목</h2>
+    <div id="titleOut" class="title-box empty">내용을 입력하면 제목이 나와요</div>
+    <div class="btns"><button id="copyTitle" class="primary">제목 복사</button></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 본문 내용</h2>
+    <div class="only-pum">
+      <div class="row">
+        <label class="f">품의 일
+          <input type="date" id="pDate">
+        </label>
+        <label class="f">품의 금액 (원)
+          <input type="text" id="pAmt" inputmode="numeric" placeholder="예: 275,000">
+        </label>
+        <label class="f">결재자
+          <input type="text" id="pSigner" value="윤 사 명&nbsp;&nbsp; &nbsp; 대표">
+        </label>
+        <label class="f">VAT
+          <select id="pVat"><option value="포함" selected>VAT 포함</option><option value="별도">VAT 별도</option><option value="">표기 안 함</option></select>
+        </label>
+      </div>
+      <label class="f" style="margin-top:8px">품의 내용 (한 줄에 한 항목, 번호 자동)
+        <textarea id="pContent" placeholder="예: 26년 10월 14일 소방 종합점검 지적 사항 처리&#10;11월 11일 공사 완료 (동대표 협의), 수선유지비(관리비)로 부과"></textarea>
+      </label>
+      <label class="f" style="margin-top:8px">* 첨부 (한 줄에 한 개, 번호 자동)
+        <textarea id="pAttach" placeholder="예: 견적서&#10;세금계산서"></textarea>
+      </label>
+    </div>
+
+    <div class="only-exp">
+      <div class="row">
+        <label class="f">품의 승인일 <input type="date" id="eApprove"></label>
+        <label class="f">결재 요청일 <input type="date" id="eRequest"></label>
+      </div>
+      <div style="margin-top:8px;font-size:14px"><b>내역</b> <span class="hint">(VAT 포함액)</span></div>
+      <table class="items">
+        <thead><tr><th style="width:7%">순번</th><th>적요</th><th style="width:22%">금액 (원)</th><th style="width:24%">비고</th><th style="width:30px"></th></tr></thead>
+        <tbody id="eBody"></tbody>
+      </table>
+      <div class="btns"><button id="addE" class="ghost">+ 줄 추가</button></div>
+      <div class="total">합계 <b id="eTotal">0</b> 원</div>
+
+      <div style="margin-top:10px;font-size:14px"><b>※ 송금 요청 내역</b> <span class="hint">(없으면 비워 두세요)</span></div>
+      <table class="items">
+        <thead><tr><th style="width:7%">순번</th><th>거래처(예금주)</th><th style="width:14%">은행명</th><th style="width:20%">계좌번호</th><th style="width:14%">송금액</th><th style="width:15%">송금요청일</th><th style="width:10%">관리</th><th style="width:30px"></th></tr></thead>
+        <tbody id="sBody"></tbody>
+      </table>
+      <div class="btns"><button id="addS" class="ghost">+ 줄 추가</button></div>
+      <label class="f" style="margin-top:8px">표 아래 메모 (선택, 한 줄씩)
+        <textarea id="eMemo" placeholder="예: * 기안 결재 완료 후, 쿠팡 법인카드로 결제 예정입니다."></textarea>
+      </label>
+      <div class="hint">비고 칸에 줄을 나누려면 “ / ”로 구분하세요. 예: 법인LMS 본사통장에서 자동이체됨. / 시범적용으로 관리비 부과안함.</div>
+    </div>
+    <div class="hint" style="margin-top:6px">증빙(세금계산서·견적서 등)은 하이웍스 <b>별첨</b>에 파일로 넣어 주세요. 결재선·참조도 하이웍스에서 설정해요.</div>
+  </section>
+
+  <section class="panel">
+    <h2>4. 회사 규칙 검사</h2>
+    <div id="issues" class="issues good"></div>
+  </section>
+
+  <section class="panel">
+    <h2>5. 본문 편집창</h2>
+    <div id="editor" contenteditable="true" spellcheck="false"></div>
+    <div class="btns">
+      <button id="copyBody" class="primary">본문 복사</button>
+      <button id="regen" class="ghost">입력값으로 다시 채우기</button>
+      <span id="dirtyNote" class="hint"></span>
+    </div>
+    <div class="hint">하이웍스 본문 칸의 기본 양식을 지우고(Ctrl+A → Delete) 붙여넣으세요. 표 서식이 그대로 옮겨져요.</div>
+  </section>
+
+  <footer>경리팀 도구모음 · 입력값은 이 브라우저에만 남아요</footer>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+  var LS = 'gian-maker-v3';
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  var dirty = false;
+  var WHO_OK = ['개인LMS', '법인LMS', 'LMS관리팀', 'LMS경리팀'];
+  var FONT = 'font-family:&quot;맑은 고딕&quot;;font-size:16px;';
+  var TD = 'border:1px solid #000;padding:2px 7px;';
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function won(n){ return (Number(n) || 0).toLocaleString('ko-KR'); }
+  function num(v){ var n = Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')); return isNaN(n) ? 0 : n; }
+  function lines(s){ return String(s || '').split('\n').map(function(x){ return x.trim(); }).filter(Boolean); }
+  function todayKST(){
+    var k = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    return k.getFullYear() + '-' + String(k.getMonth() + 1).padStart(2, '0') + '-' + String(k.getDate()).padStart(2, '0');
+  }
+  function dateKo(s){ if (!s) return '&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일'; var p = s.split('-'); return p[0] + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일'; }
+  function toast(msg){
+    var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('on'); }, 1800);
+  }
+
+  // 금액 → 한글 (275000 → 이십칠만오천)
+  function koNum(n){
+    if (!n) return '영';
+    var d = '일이삼사오육칠팔구', sm = ['', '십', '백', '천'], big = ['', '만', '억', '조'], g = [], out = '';
+    while (n > 0) { g.push(n % 10000); n = Math.floor(n / 10000); }
+    for (var i = g.length - 1; i >= 0; i--) {
+      var v = g[i], s = ''; if (!v) continue;
+      for (var j = 0; j < 4; j++) { var dig = v % 10; if (dig) s = (dig === 1 && j > 0 ? '' : d[dig - 1]) + sm[j] + s; v = Math.floor(v / 10); }
+      out += s + big[i];
+    }
+    return out;
+  }
+
+  // 제목 앞부분 날짜 (공지 예시 형식)
+  function datePart(unit, s){
+    if (unit === 'none' || !s) return '';
+    var p = s.split('-'), yy = p[0].slice(2);
+    if (unit === 'y') return yy + '년도';
+    if (unit === 'ym') return yy + '년 ' + Number(p[1]) + '월';
+    return yy + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일';
+  }
+
+  function readForm(){
+    var k = $$('input[name=kind]').filter(function(r){ return r.checked; })[0];
+    var who = $('#who').value === '__custom' ? $('#whoCustom').value.trim() : $('#who').value;
+    var eItems = $$('#eBody tr').map(function(tr){
+      return { name: tr.querySelector('.i-name').value.trim(), amt: num(tr.querySelector('.i-amt').value), note: tr.querySelector('.i-note').value.trim() };
+    }).filter(function(i){ return i.name || i.amt || i.note; });
+    var sRows = $$('#sBody tr').map(function(tr){
+      var g = function(c){ return tr.querySelector(c).value.trim(); };
+      return { who: g('.s-who'), bank: g('.s-bank'), acct: g('.s-acct'), amt: num(g('.s-amt')), date: g('.s-date'), mng: g('.s-mng') };
+    }).filter(function(r){ return r.who || r.bank || r.acct || r.amt || r.date || r.mng; });
+    var f = {
+      kind: k ? k.value : 'pum', who: who,
+      dUnit: $('#dUnit').value, tDate: $('#tDate').value,
+      bld: $('#bld').value.trim(), what: $('#what').value.trim(),
+      tax: $('#tax').checked, cash: $('#cash').checked, fac: $('#fac').checked, card: $('#card').checked, auto: $('#auto').checked,
+      pDate: $('#pDate').value, pAmt: num($('#pAmt').value), pVat: $('#pVat').value,
+      pContent: $('#pContent').value, pAttach: $('#pAttach').value, pSigner: $('#pSigner').value.replace(/\u00a0/g, ' '), eMemo: $('#eMemo').value,
+      eApprove: $('#eApprove').value, eRequest: $('#eRequest').value,
+      eItems: eItems, sRows: sRows
+    };
+    f.eTotal = eItems.reduce(function(a, b){ return a + b.amt; }, 0);
+    f.core = [datePart(f.dUnit, f.tDate), f.bld, f.what].filter(Boolean).join(' ');
+    return f;
+  }
+
+  // 제목: [주체] 연월 건물 내용의 건 품의서 / (세계/현영/시설/카드/자동이체)
+  function buildTitle(f){
+    if (!f.who || !f.what) return '';
+    var head = '[' + f.who + '] ' + f.core + '의 건';
+    if (f.kind === 'pum') return head + ' 품의서';
+    var parts = [];
+    if (f.tax) parts.push('세계');
+    if (f.cash) parts.push('현영');
+    if (f.fac) parts.push('시설');
+    if (f.card) parts.push('카드');
+    if (f.auto) parts.push('자동이체');
+    return parts.length ? head + '(' + parts.join('/') + ')' : head;
+  }
+
+  // ===== 하이웍스 기본 양식과 같은 서식(표 너비·글자 크기·테두리)으로 만들기 =====
+  var MG = 'font-family: &quot;맑은 고딕&quot;;';
+  function sp(t, size, bold){ return '<span style="' + (bold ? 'font-weight: bold; ' : '') + MG + ' font-size: ' + size + 'px;">' + (t === '' || t == null ? '&nbsp;' : t) + '</span>'; }
+  function pp(inner, align, lh, mr){
+    return '<p class="0" style="' + MG + ' font-size: 16px;' + (align ? ' text-align: ' + align + ';' : '') + ' line-height: ' + (lh || 1.4) + '; margin: ' + (mr ? '0px ' + mr + 'px 0px 0px' : '0px') + ';">' + inner + '</p>';
+  }
+  function td(inner, bs, bw, opt){
+    opt = opt || {};
+    return '<td style="' + (opt.nopad ? '' : 'padding: ' + (opt.pad || '1.88px') + '; ') + (opt.w ? 'width: ' + opt.w + 'px; ' : '') + 'border-color: rgb(0, 0, 0); border-style: ' + bs + '; border-width: ' + bw + ';"' +
+      (opt.cs ? ' colspan="' + opt.cs + '"' : '') + (opt.rs ? ' rowspan="' + opt.rs + '"' : '') + '>' + inner + '</td>';
+  }
+  var P16 = function(t){ return pp(sp(t, 16), null, 1.6); };
+
+  // 품의서 (원본: 표 너비 626px, 글자 16px)
+  function pumBody(f){
+    var c = lines(f.pContent).map(function(x, i){ return (i + 1) + '. ' + esc(x); });
+    var a = lines(f.pAttach);
+    if (a.length) { c.push(''); c.push('* 첨부'); a.forEach(function(x, i){ c.push((i + 1) + '. ' + esc(x)); }); }
+    var B = 'solid', W = '1px', o = { pad: '1.88px 6.8px' }, oc = { pad: '1.88px 6.8px', cs: 3 };
+    var amt = f.pAmt
+      ? '일금&nbsp; ' + koNum(f.pAmt) + '&nbsp; 원정&nbsp;(₩&nbsp; ' + won(f.pAmt) + '&nbsp;)' + (f.pVat ? ' VAT&nbsp;' + f.pVat : '')
+      : '일금&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 원정&nbsp;(₩&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )' + (f.pVat ? ' VAT&nbsp;' + f.pVat : '');
+    return '<div class="se-div" style="' + MG + ' font-size: 16px; line-height: 1.8; margin-top: 0px; margin-bottom: 0px;">' +
+      pp('<span>&nbsp;&nbsp;&nbsp;</span>', 'center', 1.6) +
+      '<table style="vertical-align: text-bottom; border-collapse: collapse; width: 626.4px; border-color: rgb(0, 0, 0); border-style: solid; border-width: 1px;"><colgroup><col style="width: 119px;"><col style="width: 210px;"><col style="width: 104px;"><col style="width: 195px;"></colgroup><tbody>' +
+      '<tr style="height: 41px;">' + td(P16('&nbsp;&nbsp;품&nbsp; 의 &nbsp;명&nbsp;:'), B, W, o) + td(P16(f.core ? esc(f.core) + '의 건' : ''), B, W, oc) + '</tr>' +
+      '<tr style="height: 44px;">' + td(P16('&nbsp;&nbsp;품 &nbsp;의&nbsp; 일&nbsp;:'), B, W, o) + td(P16(f.pDate ? '&nbsp;' + dateKo(f.pDate) : ''), B, W, o) +
+        td(P16('&nbsp;결 재 자&nbsp;:'), B, W, o) + td(P16('&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;' + esc(f.pSigner || '').replace(/  /g, ' &nbsp;')), B, W, o) + '</tr>' +
+      '<tr style="height: 267px;">' + td(pp('<br>' + sp('&nbsp;품 의 내 용&nbsp;:', 16), null, 1.6), B, W, o) + td(c.length ? c.map(P16).join('') : P16(''), B, W, oc) + '</tr>' +
+      '<tr style="height: 44px;">' + td(P16('&nbsp;품 의 금 액&nbsp;:'), B, W, o) + td(P16(amt), B, W, oc) + '</tr>' +
+      '</tbody></table>' +
+      pp('<span>&nbsp;&nbsp;&nbsp;</span>', null, 1.6) +
+      pp(sp('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 상기 내용의 품의서를 제출하오니 검토 후 결재해 주시기 바랍니다.', 16), 'left', 1.6) +
+      '</div>';
+  }
+
+  // 지출결의서 (원본: 표 너비 670px, 글자 12px)
+  function expBody(f){
+    var S = function(t, b){ return sp(t, 12, b); };
+    var BLANK_DATE = '년&nbsp;&nbsp;&nbsp;&nbsp; 월&nbsp;&nbsp;&nbsp;&nbsp;일';
+    var dt = function(s){ return s ? dateKo(s) : BLANK_DATE; };
+    var h = '<div class="se-div" style="' + MG + ' font-size: 16px; line-height: 1.8; margin-top: 0px; margin-bottom: 0px;">' +
+      '<table style="border-collapse: collapse; vertical-align: text-bottom; width: 669.399px; border-color: rgb(0, 0, 0); border-style: solid; border-width: 1px;"><colgroup><col style="width: 110px;"><col style="width: 1px;"><col style="width: 205px;"><col style="width: 38px;"><col style="width: 14px;"><col style="width: 24px;"><col style="width: 102px;"><col><col><col style="width: 1px;"><col style="width: 74px;"></colgroup><tbody>';
+    // 일금 / ￦
+    h += '<tr style="height: 49.4618px;">' +
+      td(pp('<span>&nbsp;</span>'), 'none none none solid', '0px 0px 0px 2px', { w: 111, cs: 2 }) +
+      td(pp(sp('&nbsp;', 16, true)) + pp(sp('일금&nbsp; ' + (f.eTotal ? koNum(f.eTotal) : '&nbsp;') + '&nbsp; 원정', 16, true)), 'none none solid', '0px 0px 1px', { w: 257, cs: 3 }) +
+      td(pp(sp('&nbsp;', 16, true)), 'initial', '0px', { w: 24 }) +
+      td(pp('<span>&nbsp;</span>') + pp(sp('￦&nbsp; ' + (f.eTotal ? won(f.eTotal) : '&nbsp;'), 16, true)), 'none none solid', '0px 0px 1px', { w: 205, cs: 4 }) +
+      td(pp(sp('&nbsp;', 13), null, 1.6), 'none solid none none', '0px 2px 0px 0px', { w: 74 }) + '</tr>';
+    h += '<tr style="height: 30px;">' +
+      td(pp(sp('&nbsp;', 13), null, 1.6), 'none none solid solid', '0px 0px 1px 2px', { w: 111, cs: 2 }) +
+      td(pp('<span>&nbsp;</span>', null, 1.6), 'solid none', '1px 0px', { w: 257, cs: 3 }) +
+      td(pp(sp('&nbsp;', 13), null, 1.6), 'none none solid', '0px 0px 1px', { w: 24 }) +
+      td(pp(sp('&nbsp;', 13), null, 1.6), 'solid none', '1px 0px', { w: 204, cs: 3 }) +
+      td(pp(sp('&nbsp;', 13), null, 1.6), 'none solid solid none', '0px 2px 1px 0px', { w: 75, cs: 2 }) + '</tr>';
+    // 품의 승인일 / 결재 요청일
+    h += '<tr style="height: 27px;">' +
+      td(pp(S('품의 승인일'), 'center'), 'solid', '1px 1px 1px 2px', { w: 111, cs: 2 }) +
+      td(pp(S(dt(f.eApprove)), 'right', 1.4, 13.3333), 'solid', '1px', { w: 205 }) +
+      td(pp(S('인'), 'center'), 'solid', '1px', { w: 38 }) +
+      td(pp(S('&nbsp;'), null, 1), 'solid', '1px 2px 1px 1px', { nopad: true, w: 317, cs: 7, rs: 2 }) + '</tr>';
+    h += '<tr style="height: 27px;">' +
+      td(pp(S('결재 요청일'), 'center'), 'solid', '1px 1px 1px 2px', { w: 111, cs: 2 }) +
+      td(pp(S(dt(f.eRequest)), 'right', 1.4, 13.3333), 'solid', '1px', { w: 205 }) +
+      td(pp(S('인'), 'center'), 'solid', '1px', { w: 38 }) + '</tr>';
+    // 내역 머리
+    h += '<tr style="height: 27px;">' + td(pp(S('내&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 역&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (VAT 포함액)&nbsp;&nbsp;&nbsp;&nbsp;', true), 'right'), 'solid', '1px 2px', { w: 671, cs: 11 }) + '</tr>';
+    h += '<tr style="height: 27px;">' +
+      td(pp(S('순번', true), 'center'), 'solid', '1px 1px 1px 2px', { w: 110 }) +
+      td(pp(S('적 요', true), 'center'), 'solid', '1px', { w: 206, cs: 2 }) +
+      td(pp(S('금 액', true), 'center'), 'solid', '1px', { w: 178, cs: 4 }) +
+      td(pp(S('비고', true), 'center'), 'solid', '1px 2px 1px 1px', { w: 177, cs: 4 }) + '</tr>';
+    var n = Math.max(8, f.eItems.length);
+    for (var i = 0; i < n; i++) {
+      var it = f.eItems[i] || { name: '', amt: 0, note: '' };
+      var notes = it.note ? esc(it.note).split(/\s*\/\s*/).map(function(x){ return pp(S(x)); }).join('') : pp(S('&nbsp;'));
+      h += '<tr style="height: 27px;">' +
+        td(pp(S(String(i + 1)), 'center'), 'solid', '1px 1px 1px 2px', { w: 110 }) +
+        td(pp(S(esc(it.name))), 'solid', '1px', { w: 206, cs: 2 }) +
+        td(pp(S(it.amt ? won(it.amt) : '&nbsp;'), 'right', 1.4, 6.66667), 'solid', '1px', { w: 178, cs: 4 }) +
+        td(notes, 'solid', '1px 2px 1px 1px', { w: 177, cs: 4 }) + '</tr>';
+    }
+    h += '<tr style="height: 27px;">' +
+      td(pp(S('합 계'), 'center'), 'solid', '1px 1px 1px 2px', { w: 316, cs: 3 }) +
+      td(pp(S(f.eTotal ? won(f.eTotal) : '&nbsp;'), 'right', 1.4, 6.66667), 'solid', '1px', { w: 178, cs: 4 }) +
+      td(pp(S('&nbsp;')), 'solid', '1px 2px 1px 1px', { w: 177, cs: 4 }) + '</tr>';
+    h += '<tr style="height: 30px;">' + td(pp(S('위 금액을 영수(청구)합니다.'), 'center', 1.6), 'solid', '1px 2px 2px', { w: 671, cs: 11 }) + '</tr></tbody></table>';
+    // 송금 요청 내역
+    h += '<p style="' + MG + ' font-size: 16px; line-height: 1.6; margin: 0px;">' + S('※ 송금 요청 내역') + '</p>' +
+      '<table style="border-collapse: collapse; vertical-align: text-bottom; width: 672px; border-color: rgb(0, 0, 0); border-style: solid; border-width: 1px;"><colgroup><col style="width: 46px;"><col style="width: 113px;"><col style="width: 87px;"><col style="width: 174px;"><col style="width: 82px;"><col style="width: 87px;"><col style="width: 83px;"></colgroup><tbody>';
+    var o = { pad: '1.88px 6.8px' };
+    var heads = ['순번', '거래처(예금주)', '은행명', '계좌번호', '송금액', '송금요청일', '관리'];
+    h += '<tr style="height: 23px;">' + heads.map(function(x, k){
+      return td(pp(S(x, true), k === 0 ? 'left' : 'center'), 'solid', k === 0 ? '2px 1px 1px 2px' : (k === 6 ? '2px 2px 1px 1px' : '2px 1px 1px'), o);
+    }).join('') + '</tr>';
+    var sn = Math.max(3, f.sRows.length);
+    for (var j = 0; j < sn; j++) {
+      var r = f.sRows[j] || {}, last = j === sn - 1, bot = last ? '2px' : '1px';
+      var vals = [String(j + 1), esc(r.who), esc(r.bank), esc(r.acct), r.amt ? won(r.amt) : '', esc(r.date), esc(r.mng)];
+      h += '<tr style="height: 19px;">' + vals.map(function(v, k){
+        var bw = k === 0 ? '1px 1px ' + bot + ' 2px' : (k === 6 ? '1px 2px ' + bot + ' 1px' : '1px 1px ' + bot);
+        return td(pp(S(v || '&nbsp;'), 'center'), 'solid', bw, o);
+      }).join('') + '</tr>';
+    }
+    h += '</tbody></table>';
+    var memo = lines(f.eMemo);
+    if (memo.length) h += memo.map(function(x){ return '<p style="' + MG + ' font-size: 16px; line-height: 1.6; margin: 0px;">' + S(esc(x)) + '</p>'; }).join('');
+    return h + '</div>';
+  }
+
+  // 회사 규칙 검사 (맞춤법 검사처럼 문제 + 고치기)
+  function checks(f){
+    var out = [], ed = $('#editor').innerText || '';
+    var setWhat = function(fn){ return function(){ $('#what').value = fn($('#what').value).replace(/\s+/g, ' ').trim(); }; };
+    if (!f.who) out.push({ msg: '기안 주체가 비어 있어요.' });
+    else if (WHO_OK.indexOf(f.who) < 0) out.push({ msg: '기안 주체 “' + f.who + '”는 표기 기준(개인LMS·법인LMS·LMS관리팀·LMS경리팀)과 달라요. 맞는지 확인하세요.' });
+    if (!f.bld) out.push({ msg: '대상 건물이 비어 있어요. 제목에 건물명을 넣어야 검색할 수 있어요.' });
+    if (f.dUnit !== 'none' && !f.tDate) out.push({ msg: '제목에 넣을 날짜가 비어 있어요.' });
+    if (!f.what) out.push({ msg: '지출 목적·내용이 비어 있어요.' });
+    if (/\[[^\]]*\]/.test(f.what)) out.push({ msg: '내용에 [ ] 표기가 있어요. 기안 주체는 자동으로 붙어요.', fix: setWhat(function(v){ return v.replace(/\[[^\]]*\]/g, ''); }) });
+    if (/\d{2,4}\s*년(도)?(\s*\d{1,2}\s*월)?(\s*\d{1,2}\s*일)?/.test(f.what)) out.push({ msg: '내용에 날짜가 들어 있어요. 날짜는 위 “날짜 표기”로 넣어 주세요(순서: 연월 → 건물명).', fix: setWhat(function(v){ return v.replace(/\d{2,4}\s*년(도)?(\s*\d{1,2}\s*월)?(\s*\d{1,2}\s*일)?/g, ''); }) });
+    if (f.bld && f.what.indexOf(f.bld) >= 0) out.push({ msg: '내용에 건물명이 또 들어 있어요. 건물명은 “대상 건물” 칸에만 넣어 주세요.', fix: setWhat(function(v){ return v.split(f.bld).join(''); }) });
+    if (/의\s*건\s*$|의건\s*$|품의서|\((세계|현영|시설|카드|자동이체)[^)]*\)\s*$/.test(f.what)) out.push({ msg: '내용 끝의 “의 건”, “품의서”, 증빙 괄호는 자동으로 붙으니 빼 주세요.', fix: setWhat(function(v){ return v.replace(/\((세계|현영|시설|카드|자동이체)[^)]*\)\s*$/, '').replace(/품의서/g, '').replace(/\s*의\s*건\s*$/, ''); }) });
+    if (/\s{2,}/.test(f.what) || f.what !== f.what.trim()) out.push({ msg: '내용에 띄어쓰기가 두 번 이상 있어요.', fix: setWhat(function(v){ return v; }) });
+    if (buildTitle(f).length > 70) out.push({ msg: '제목이 너무 길어요. 핵심만 남겨 주세요.' });
+
+    if (f.kind === 'pum') {
+      if (!f.pDate) out.push({ msg: '품의 일이 비어 있어요.' });
+      if (!f.pAmt) out.push({ msg: '품의 금액이 비어 있어요.' });
+      if (!lines(f.pContent).length) out.push({ msg: '품의 내용이 비어 있어요.' });
+      if (/^\s*\d+[.)]/m.test(f.pContent)) out.push({ msg: '품의 내용 앞에 번호를 직접 쓰셨어요. 번호는 자동으로 붙어요.', fix: function(){ $('#pContent').value = $('#pContent').value.replace(/^\s*\d+[.)]\s*/mg, ''); } });
+      if (dirty && !/결재해 주시기 바랍니다/.test(ed)) out.push({ msg: '본문에 맺음말(“상기 내용의 품의서를 제출하오니 …”)이 없어요.' });
+    } else {
+      var ev = [f.tax, f.cash, f.fac, f.card, f.auto].filter(Boolean).length;
+      if (!ev) out.push({ msg: '증빙·비용 구분을 골라 주세요. 지출결의서 제목 끝에 괄호로 붙어요.' });
+      if (f.tax && f.cash) out.push({ msg: '세금계산서와 현금영수증이 둘 다 체크돼 있어요. 실제 증빙을 확인하세요.' });
+      if (!f.eItems.length) out.push({ msg: '내역이 없어요.' });
+      if (f.eItems.some(function(i){ return !i.amt; })) out.push({ msg: '금액이 비어 있는 내역 줄이 있어요.' });
+      if (!f.eRequest) out.push({ msg: '결재 요청일이 비어 있어요.' });
+      if (f.sRows.length) {
+        if (f.sRows.some(function(r){ return !r.who || !r.bank || !r.acct || !r.amt; })) out.push({ msg: '송금 요청 내역에 빈 칸(거래처·은행·계좌·송금액)이 있어요.' });
+        var st = f.sRows.reduce(function(a, r){ return a + r.amt; }, 0);
+        if (st && st !== f.eTotal) out.push({ msg: '송금액 합계(' + won(st) + '원)가 내역 합계(' + won(f.eTotal) + '원)와 달라요. 확인하세요.' });
+      }
+      if (dirty && !/영수\(청구\)합니다/.test(ed)) out.push({ msg: '본문에 “위 금액을 영수(청구)합니다.” 문구가 없어요.' });
+    }
+    return out;
+  }
+
+  function renderIssues(list){
+    var box = $('#issues');
+    box._list = list;
+    if (!list.length) { box.className = 'issues good'; box.innerHTML = '✔ 회사 규칙에 맞게 작성됐어요.'; return; }
+    box.className = 'issues bad';
+    var fixable = list.filter(function(i){ return i.fix; }).length;
+    box.innerHTML = list.map(function(it, idx){
+      return '<div class="it"><span>· ' + esc(it.msg) + '</span>' + (it.fix ? '<button class="fix" data-i="' + idx + '">고치기</button>' : '') + '</div>';
+    }).join('') + (fixable > 1 ? '<div class="btns"><button id="fixAll" class="fix">고칠 수 있는 것 모두 고치기</button></div>' : '');
+  }
+
+  function refresh(){
+    var f = readForm();
+    document.body.classList.toggle('pum', f.kind === 'pum');
+    document.body.classList.toggle('exp', f.kind !== 'pum');
+    $('#whoCustomWrap').style.display = $('#who').value === '__custom' ? '' : 'none';
+    // 카드·자동이체는 단독 표기
+    var single = f.card || f.auto;
+    ['#tax', '#cash', '#fac'].forEach(function(id){ $(id).disabled = single; if (single) $(id).checked = false; });
+    $('#card').disabled = f.auto || f.tax || f.cash || f.fac;
+    $('#auto').disabled = f.card || f.tax || f.cash || f.fac;
+    f = readForm();
+    var t = buildTitle(f), tb = $('#titleOut');
+    tb.textContent = t || '내용을 입력하면 제목이 나와요';
+    tb.classList.toggle('empty', !t);
+    $('#eTotal').textContent = won(f.eTotal);
+    if (!dirty) $('#editor').innerHTML = f.kind === 'pum' ? pumBody(f) : expBody(f);
+    renderIssues(checks(f));
+    $('#dirtyNote').textContent = dirty ? '본문을 직접 고쳐서, 입력값은 본문에 반영하지 않았어요.' : '';
+    save();
+  }
+
+  function numberRows(tb){ $$('#' + tb + ' tr').forEach(function(tr, i){ tr.querySelector('.idx').textContent = i + 1; }); }
+  function addE(){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="idx" style="text-align:center"></td><td><input type="text" class="i-name"></td><td><input type="text" class="i-amt" inputmode="numeric" placeholder="0"></td><td><input type="text" class="i-note"></td><td><button class="del" type="button" title="줄 삭제">×</button></td>';
+    $('#eBody').appendChild(tr); numberRows('eBody');
+  }
+  function addS(){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="idx" style="text-align:center"></td><td><input type="text" class="s-who"></td><td><input type="text" class="s-bank"></td><td><input type="text" class="s-acct"></td><td><input type="text" class="s-amt" inputmode="numeric"></td><td><input type="text" class="s-date" placeholder="11/30"></td><td><input type="text" class="s-mng"></td><td><button class="del" type="button" title="줄 삭제">×</button></td>';
+    $('#sBody').appendChild(tr); numberRows('sBody');
+  }
+  $('#addE').addEventListener('click', function(){ addE(); });
+  $('#addS').addEventListener('click', function(){ addS(); });
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t.classList.contains('del')) {
+      var tb = t.closest('tbody'); t.closest('tr').remove();
+      if (!tb.querySelector('tr')) (tb.id === 'eBody' ? addE : addS)();
+      numberRows(tb.id); refresh();
+    } else if (t.classList.contains('fix') && t.dataset.i !== undefined) {
+      var it = ($('#issues')._list || [])[Number(t.dataset.i)];
+      if (it && it.fix) { it.fix(); refresh(); toast('고쳤어요'); }
+    } else if (t.id === 'fixAll') {
+      var n = 0;
+      for (var k = 0; k < 5; k++) { var l = checks(readForm()).filter(function(i){ return i.fix; }); if (!l.length) break; l[0].fix(); n++; }
+      refresh(); toast(n + '곳을 고쳤어요');
+    }
+  });
+  // 금액 칸 쉼표
+  document.addEventListener('blur', function(e){
+    var c = e.target.classList;
+    if (c && (c.contains('i-amt') || c.contains('s-amt') || e.target.id === 'pAmt')) { var n = num(e.target.value); e.target.value = n ? won(n) : ''; refresh(); }
+  }, true);
+
+  var form = document.querySelector('.wrap');
+  form.addEventListener('input', function(e){ if (e.target.id !== 'editor') refresh(); });
+  form.addEventListener('change', function(e){ if (e.target.id !== 'editor') refresh(); });
+  $('#editor').addEventListener('input', function(){ dirty = true; $('#dirtyNote').textContent = '본문을 직접 고쳐서, 입력값은 본문에 반영하지 않았어요.'; renderIssues(checks(readForm())); });
+  $('#regen').addEventListener('click', function(){ dirty = false; refresh(); toast('입력값으로 본문을 다시 채웠어요'); });
+
+  // 복사
+  $('#copyTitle').addEventListener('click', function(){
+    if ($('#titleOut').classList.contains('empty')) return toast('제목이 아직 비어 있어요');
+    var t = $('#titleOut').textContent;
+    var fb = function(){ var x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); var ok = document.execCommand('copy'); x.remove(); toast(ok ? '제목을 복사했어요' : '복사가 안 됐어요. 제목을 드래그해 복사해 주세요'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ toast('제목을 복사했어요'); }, fb); else fb();
+  });
+  $('#copyBody').addEventListener('click', function(){
+    var el = $('#editor');
+    var fb = function(){
+      var r = document.createRange(); r.selectNodeContents(el);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      var ok = document.execCommand('copy'); s.removeAllRanges();
+      toast(ok ? '본문을 복사했어요' : '복사가 안 됐어요. 본문을 드래그해 Ctrl+C 해 주세요');
+    };
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([el.innerHTML], { type: 'text/html' }), 'text/plain': new Blob([el.innerText], { type: 'text/plain' }) })])
+        .then(function(){ toast('본문을 복사했어요 (표 서식 포함)'); }, fb);
+    } else fb();
+  });
+
+  (function(){
+    var k = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' })), b = $('#phase');
+    if (k <= new Date(2026, 10, 30, 23, 59, 59)) { b.textContent = '시범운영 중 (11/30까지) · 12/1부터 정식 시행'; b.className = 'badge pilot'; }
+    else { b.textContent = '정식 시행 중'; b.className = 'badge formal'; }
+  })();
+
+  function save(){
+    try { localStorage.setItem(LS, JSON.stringify({ who: $('#who').value, whoCustom: $('#whoCustom').value, dUnit: $('#dUnit').value, bld: $('#bld').value, pVat: $('#pVat').value })); } catch (e) {}
+  }
+  function restore(){
+    try {
+      var d = JSON.parse(localStorage.getItem(LS) || 'null'); if (!d) return;
+      ['who', 'whoCustom', 'dUnit', 'bld', 'pVat'].forEach(function(k){ if (d[k] != null && d[k] !== '') $('#' + k).value = d[k]; });
+    } catch (e) {}
+  }
+
+
+  // ===== 영수증 자동 채우기 (Claude가 이미지·PDF를 읽음) =====
+  var ocrFiles = [], sampleFn = null;
+  // Claude 화면이 아니면(예: GitHub Pages) 자동 채우기 대신 Claude 화면으로 가는 링크를 보여 줌
+  function linkMode(){ $('#ocrMain').style.display = 'none'; $('#ocrLink').style.display = ''; $('#ocrPanel').style.display = ''; }
+  if (window.claude && window.claude.use) {
+    window.claude.use('sample').then(function(s){
+      if (!s) return linkMode();
+      sampleFn = s;
+      $('#ocrMain').style.display = ''; $('#ocrLink').style.display = 'none';
+      $('#ocrPanel').style.display = '';
+    }).catch(linkMode);
+  } else linkMode();
+  function setFiles(list){
+    ocrFiles = Array.prototype.slice.call(list).filter(function(f){ return /^image\//.test(f.type) || f.type === 'application/pdf'; });
+    $('#ocrList').textContent = ocrFiles.length ? ocrFiles.map(function(f){ return '📎 ' + f.name; }).join('  ') : '';
+    $('#ocrRun').disabled = !ocrFiles.length;
+  }
+  $('#drop').addEventListener('click', function(){ $('#ocrFile').click(); });
+  $('#ocrFile').addEventListener('change', function(){ setFiles(this.files); });
+  $('#drop').addEventListener('dragover', function(e){ e.preventDefault(); });
+  $('#drop').addEventListener('drop', function(e){ e.preventDefault(); setFiles(e.dataTransfer.files); });
+
+  var pdfReady = null;
+  function loadPdfJs(){
+    if (pdfReady) return pdfReady;
+    var base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+    var load = function(src){ return new Promise(function(ok, no){ var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); };
+    pdfReady = load(base + 'pdf.min.js').then(function(){ return load(base + 'pdf.worker.min.js'); }).then(function(){
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+      return window.pdfjsLib;
+    });
+    return pdfReady;
+  }
+  function canvasBlob(c){ return new Promise(function(ok){ c.toBlob(ok, 'image/jpeg', 0.85); }); }
+  // 큰 사진은 줄여서 보냄
+  function shrinkImage(file){
+    return new Promise(function(ok){
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function(){
+        var s = Math.min(1, 1800 / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        canvasBlob(c).then(ok);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); ok(file); };
+      img.src = url;
+    });
+  }
+  function pdfToImages(file){
+    return loadPdfJs().then(function(lib){
+      return file.arrayBuffer().then(function(buf){ return lib.getDocument({ data: buf }).promise; });
+    }).then(function(doc){
+      var out = [], n = Math.min(doc.numPages, 3), chain = Promise.resolve();
+      for (var i = 1; i <= n; i++) (function(i){
+        chain = chain.then(function(){ return doc.getPage(i); }).then(function(pg){
+          var vp = pg.getViewport({ scale: 1.6 }), c = document.createElement('canvas');
+          c.width = vp.width; c.height = vp.height;
+          return pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function(){ return canvasBlob(c); }).then(function(b){ out.push(b); });
+        });
+      })(i);
+      return chain.then(function(){ return out; });
+    });
+  }
+
+  var OCR_PROMPT = [
+    '첨부한 이미지는 한국 회사 경리팀이 지출 기안에 쓰는 증빙(영수증, 카드전표, 현금영수증, 세금계산서, 견적서, 고지서 등)입니다.',
+    '모든 이미지를 합쳐 하나의 지출 건으로 보고, 아래 JSON 하나만 답하세요. 설명이나 코드블록 없이 JSON만.',
+    '{"evidence":"세금계산서|현금영수증|카드|자동이체|기타","date":"YYYY-MM-DD (거래일·작성일자)","vendor":"거래처(상호)","items":[{"name":"품목/적요","amount":숫자(VAT 포함 원 단위)}],"total":숫자(VAT 포함 합계),"summary":"지출 내용 짧게(예: 관리물품 구매, 승강기 정기검사). 건물명·날짜는 넣지 말 것","bank":{"holder":"예금주","bank":"은행명","account":"계좌번호"}}',
+    '규칙: 금액은 쉼표 없는 정수. 품목이 많으면 비슷한 것끼리 묶어 8줄 이내. 배송비는 따로 한 줄. 읽을 수 없는 값은 빈 문자열이나 0.',
+    '세금계산서는 "세금계산서", 현금영수증은 "현금영수증", 신용·체크카드 전표나 카드 결제 영수증은 "카드", 계좌 자동이체·고지서 자동납부는 "자동이체".',
+    '계좌 정보가 증빙에 없으면 bank 칸은 모두 빈 문자열.'
+  ].join('\n');
+
+  function parseJson(t){
+    if (t && typeof t === 'object') return t;
+    var m = String(t || '').match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('읽은 결과를 해석하지 못했어요');
+    return JSON.parse(m[0]);
+  }
+
+  function fillFromReceipt(r){
+    var f = readForm();
+    if (r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
+      $('#tDate').value = r.date;
+      if (f.kind === 'pum') $('#pDate').value = $('#pDate').value || r.date;
+    }
+    if (!$('#what').value.trim() && r.summary) $('#what').value = String(r.summary).trim();
+    var items = (r.items || []).filter(function(i){ return i && (i.name || i.amount); });
+    var total = num(r.total) || items.reduce(function(a, i){ return a + num(i.amount); }, 0);
+    if (f.kind !== 'pum') {
+      // 증빙 구분
+      ['#tax', '#cash', '#fac', '#card', '#auto'].forEach(function(id){ $(id).checked = false; $(id).disabled = false; });
+      var ev = { '세금계산서': '#tax', '현금영수증': '#cash', '카드': '#card', '자동이체': '#auto' }[r.evidence];
+      if (ev) $(ev).checked = true;
+      // 내역
+      $('#eBody').innerHTML = '';
+      (items.length ? items : [{ name: r.summary || '', amount: total }]).forEach(function(i){
+        addE();
+        var tr = $('#eBody').lastElementChild;
+        tr.querySelector('.i-name').value = i.name || '';
+        tr.querySelector('.i-amt').value = num(i.amount) ? won(num(i.amount)) : '';
+      });
+      // 송금 요청 (계좌가 있을 때만)
+      var b = r.bank || {};
+      if (b.account) {
+        $('#sBody').innerHTML = ''; addS();
+        var sr = $('#sBody').lastElementChild;
+        sr.querySelector('.s-who').value = b.holder || r.vendor || '';
+        sr.querySelector('.s-bank').value = b.bank || '';
+        sr.querySelector('.s-acct').value = b.account || '';
+        sr.querySelector('.s-amt').value = total ? won(total) : '';
+      }
+    } else {
+      if (total) $('#pAmt').value = won(total);
+      if (!$('#pContent').value.trim()) {
+        $('#pContent').value = items.map(function(i){ return (i.name || '') + (num(i.amount) ? ' ' + won(num(i.amount)) + '원' : ''); }).join('\n') + (r.vendor ? '\n거래처: ' + r.vendor : '');
+      }
+      var att = { '세금계산서': '세금계산서', '현금영수증': '현금영수증', '카드': '카드 영수증', '자동이체': '고지서' }[r.evidence] || '영수증';
+      if ($('#pAttach').value.indexOf(att) < 0) $('#pAttach').value = ($('#pAttach').value.trim() ? $('#pAttach').value.trim() + '\n' : '') + att;
+    }
+    dirty = false;
+    refresh();
+    var sum = items.reduce(function(a, i){ return a + num(i.amount); }, 0);
+    var warn = (items.length && total && sum !== total) ? ' ⚠ 품목 합계(' + won(sum) + ')와 총액(' + won(total) + ')이 달라요. 원본을 확인하세요.' : '';
+    $('#ocrMsg').textContent = '채웠어요 · ' + (r.vendor || '거래처 미확인') + ' · ' + (total ? won(total) + '원' : '금액 미확인') + ' · ' + (r.evidence || '증빙 미확인') + '. 건물명·내용을 확인하세요.' + warn;
+  }
+
+  $('#ocrRun').addEventListener('click', function(){
+    if (!sampleFn || !ocrFiles.length) return;
+    var btn = this; btn.disabled = true; $('#ocrMsg').textContent = '파일 준비 중…';
+    Promise.all(ocrFiles.map(function(f){ return f.type === 'application/pdf' ? pdfToImages(f) : shrinkImage(f).then(function(b){ return [b]; }); }))
+      .then(function(groups){
+        var imgs = [].concat.apply([], groups).slice(0, 6);
+        $('#ocrMsg').textContent = '읽는 중… (10~30초)';
+        var call = sampleFn.json ? sampleFn.json(OCR_PROMPT, { images: imgs }) : sampleFn(OCR_PROMPT, { images: imgs }).then(function(r){ return r.text; });
+        return call;
+      })
+      .then(function(res){ fillFromReceipt(parseJson(res)); })
+      .catch(function(err){
+        var c = err && err.code;
+        $('#ocrMsg').textContent = c === 'not_granted' ? '사용 허락이 필요해요. 다시 눌러 허락해 주세요.' : c === 'rate_limited' ? '잠시 후 다시 해 주세요.' : '읽지 못했어요: ' + ((err && err.message) || err);
+      })
+      .then(function(){ btn.disabled = false; });
+  });
+
+  restore();
+  ['#tDate', '#pDate', '#eRequest'].forEach(function(id){ $(id).value = todayKST(); });
+  addE(); addS();
+  refresh();
+})();
+</script>
+</body>
+</html>
